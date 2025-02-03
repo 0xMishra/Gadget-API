@@ -6,7 +6,7 @@ const updateGadgetInfo = z.object({
     .trim()
     .min(5, { message: "name should at least 5 characters long" }),
   status: z
-    .enum(["Available", "Deployed", "Destroyed", "Decommissioned"])
+    .enum(["available", "deployed", "destroyed", "decommissioned"])
     .optional(),
 });
 

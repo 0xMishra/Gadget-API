@@ -1,7 +1,7 @@
 import { Request, Response } from "express";
 import { db } from "../lib/db";
 import { faker } from "@faker-js/faker";
-import { GadgetStatus } from "@prisma/client";
+import { Gadget, GadgetStatus } from "@prisma/client";
 import { updateGadgetInfo, UpdateGadgetInfo } from "../schemas/gadget";
 import jwt from "jsonwebtoken";
 
@@ -14,27 +14,32 @@ export async function getAllGadgets(req: Request, res: Response) {
     const status: string = req.query["status"] as string;
 
     if (status) {
-      let newStatus: GadgetStatus;
+      let newStatus: GadgetStatus | null;
 
-      switch (status?.trim()) {
-        case "Available":
+      switch (status?.trim().toLowerCase()) {
+        case "available":
           newStatus = GadgetStatus.Available;
           break;
-        case "Deployed":
+        case "deployed":
           newStatus = GadgetStatus.Deployed;
           break;
-        case "Destroyed":
+        case "destroyed":
           newStatus = GadgetStatus.Destroyed;
           break;
-        case "Decommissioned":
+        case "decommissioned":
           newStatus = GadgetStatus.Decommissioned;
           break;
         default:
-          newStatus = GadgetStatus.Available;
+          newStatus = null;
           break;
       }
 
-      let gadgets = await db.gadget.findMany({ where: { status: newStatus } });
+      let gadgets: Gadget[] | [];
+      if (newStatus) {
+        gadgets = await db.gadget.findMany({ where: { status: newStatus } });
+      } else {
+        gadgets = [];
+      }
 
       res.status(200).json({
         gadgets,
@@ -46,10 +51,11 @@ export async function getAllGadgets(req: Request, res: Response) {
 
     gadgets.map(
       (g) =>
-        g.name +
-        " - " +
-        generateRandomProb().toString() +
-        "% success probability",
+        (g.name =
+          g.name +
+          " - " +
+          generateRandomProb().toString() +
+          "% success probability"),
     );
 
     res.status(200).json({ gadgets: gadgets });
@@ -116,7 +122,7 @@ export async function removeGadget(req: Request, res: Response) {
 
 export async function updateGadget(req: Request, res: Response) {
   try {
-    const gadgetId = req.params["id"];
+    const gadgetId: string = req.params["id"];
 
     let gadget = await db.gadget.findUnique({ where: { id: gadgetId } });
 
@@ -129,7 +135,7 @@ export async function updateGadget(req: Request, res: Response) {
 
     const parsedInput = updateGadgetInfo.safeParse({
       name,
-      status: status || "Available",
+      status: status,
     });
 
     if (!parsedInput.success) {
@@ -138,30 +144,38 @@ export async function updateGadget(req: Request, res: Response) {
       return;
     }
 
-    let newStatus: GadgetStatus;
+    let newStatus: GadgetStatus | null;
 
-    switch (status?.trim()) {
-      case "Available":
+    switch (status?.trim().toLowerCase()) {
+      case "available":
         newStatus = GadgetStatus.Available;
         break;
-      case "Deployed":
+      case "deployed":
         newStatus = GadgetStatus.Deployed;
         break;
-      case "Destroyed":
+      case "destroyed":
         newStatus = GadgetStatus.Destroyed;
         break;
-      case "Decommissioned":
+      case "decommissioned":
         newStatus = GadgetStatus.Decommissioned;
         break;
       default:
-        newStatus = GadgetStatus.Available;
+        newStatus = null;
         break;
     }
 
-    let updatedGadget = await db.gadget.update({
-      where: { id: gadgetId },
-      data: { name: name, status: newStatus || GadgetStatus.Available },
-    });
+    let updatedGadget;
+    if (newStatus) {
+      updatedGadget = await db.gadget.update({
+        where: { id: gadgetId },
+        data: { name: name, status: newStatus },
+      });
+    } else {
+      updatedGadget = await db.gadget.update({
+        where: { id: gadgetId },
+        data: { name: name },
+      });
+    }
 
     res.status(200).json({
       message: "gadget updated successfully",

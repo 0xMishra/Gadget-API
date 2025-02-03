@@ -11,7 +11,7 @@ import { authenticate } from "../middlewares/auth";
 
 const router = Router();
 
-router.get("gadgets/auth", getAuthToken);
+router.get("/gadgets/auth", getAuthToken);
 
 router
   .route("/gadgets")
@@ -23,6 +23,6 @@ router
   .delete(authenticate, removeGadget)
   .patch(authenticate, updateGadget);
 
-router.post("/:id/self-destruct", selfDestruct);
+router.post("/gadgets/:id/self-destruct", authenticate, selfDestruct);
 
 export default router;
